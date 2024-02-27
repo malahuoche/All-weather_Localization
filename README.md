@@ -1,1 +1,1 @@
-# Augmenting-Vision-with-Radar-for-All-weather-Geo-localization
+# Augmenting Vision with Radar for All-weather Geo-localization
