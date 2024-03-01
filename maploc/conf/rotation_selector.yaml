@@ -1,0 +1,8 @@
+defaults:
+  - data: mapillary
+  - training
+  - _self_
+model:
+  name: rotation_selector
+  num_classes : 64
+  matching_dim : 64 
