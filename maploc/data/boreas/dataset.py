@@ -24,7 +24,7 @@ import cv2
 class BoreasDataModule(pl.LightningDataModule):
     default_cfg = {
         **MapLocDataset.default_cfg,
-        "name": "boreas",
+        "name": "boreas", 
         # paths and fetch
         "data_dir": "/home/classlab2/16T/datasets/boreas.",
         "tiles_filename": "boreastiles.pkl",
@@ -50,6 +50,7 @@ class BoreasDataModule(pl.LightningDataModule):
         "add_map_mask": True,
         "mask_pad": 2,
         "target_focal_length": 256,
+        "sensor_type":"radar_camera",
     }
     dummy_scene_name = "boreas."
 
@@ -118,7 +119,7 @@ class BoreasDataModule(pl.LightningDataModule):
         for d in dates:
             #print(d)
             self.calibrations[d] = get_camera_calibration(
-                self.root/ d /"calib")#radiate不需要相机index
+                self.root/ d /"calib")#radiate do not need index
             #print(self.calibrations[d])
         if self.tile_manager is None:
             logger.info("Loading the tile manager...")

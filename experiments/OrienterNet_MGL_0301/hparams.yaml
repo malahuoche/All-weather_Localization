@@ -1,0 +1,90 @@
+data:
+  name: boreas
+  loading:
+    train:
+      batch_size: 4
+      num_workers: 4
+    val:
+      batch_size: 4
+      num_workers: 4
+  selection_subset_val: furthest
+  max_num_val: 500
+  drop_train_too_close_to_val: 0
+  num_classes:
+    areas: 7
+    ways: 10
+    nodes: 33
+  pixel_per_meter: 2
+  crop_size_meters: 64
+  max_init_error: 32
+  target_focal_length: 256
+  resize_image:
+  - 448
+  - 160
+  rectify_pitch: true
+  augmentation:
+    rot90: true
+    flip: true
+    image:
+      apply: true
+model:
+  image_encoder:
+    name: feature_extractor_v2
+    backbone:
+      encoder: resnet101
+      pretrained: true
+      output_dim: 128
+      num_downsample: null
+      remove_stride_from_first_conv: false
+  name: orienternet_fusion
+  latent_dim: 128
+  matching_dim: 8
+  z_max: 32
+  x_max: 32
+  pixel_per_meter: 2
+  num_scale_bins: 33
+  num_rotations: 64
+  map_encoder:
+    embedding_dim: 16
+    output_dim: 8
+    num_classes:
+      areas: 7
+      ways: 10
+      nodes: 33
+    backbone:
+      encoder: vgg19
+      pretrained: false
+      output_scales:
+      - 0
+      num_downsample: 3
+      decoder:
+      - 128
+      - 64
+      - 64
+      padding: replicate
+    unary_prior: true
+  bev_net:
+    num_blocks: 4
+    latent_dim: 128
+    output_dim: 8
+    confidence: true
+  fusion_net:
+    in_channels: 128
+experiment:
+  name: OrienterNet_MGL_0301
+  gpus: 4
+  seed: 0
+training:
+  lr: 1.0e-05
+  lr_scheduler: null
+  finetune_from_checkpoint: null
+  trainer:
+    val_check_interval: 5000
+    log_every_n_steps: 100
+    limit_val_batches: 1000
+    max_steps: 500000
+    devices: 4
+  checkpointing:
+    monitor: loss/total/val
+    save_top_k: 5
+    mode: min

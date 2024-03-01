@@ -19,7 +19,16 @@ from .voting import (
     TemplateSampler,
 )
 from .map_encoder import MapEncoder
+from .feature_extractor_v3 import FeatureExtractor1
+from .fusion_net import Fusion_net
 from .metrics import AngleError, AngleRecall, Location2DError, Location2DRecall
+import torch.nn.functional as F
+from torchvision.transforms import ToPILImage
+
+# from .data.boreas.dataset import BoreasDataModule
+import sys
+sys.path.append('/home/classlab2/root/OrienterNet')
+
 
 
 class OrienterNet(BaseModel):
@@ -27,6 +36,7 @@ class OrienterNet(BaseModel):
         "image_encoder": "???",
         "map_encoder": "???",
         "bev_net": "???",
+        "fusion_net":"???",
         "latent_dim": "???",
         "matching_dim": "???",
         "scale_range": [0, 9],
@@ -60,6 +70,8 @@ class OrienterNet(BaseModel):
         assert self.conf.prior_renorm
 
         Encoder = get_model(conf.image_encoder.get("name", "feature_extractor_v2"))
+        self.radar_encoder = FeatureExtractor1(conf.image_encoder.backbone)
+        self.fusion_net = Fusion_net(conf.fusion_net)
         self.image_encoder = Encoder(conf.image_encoder.backbone)
         self.map_encoder = MapEncoder(conf.map_encoder)
         self.bev_net = None if conf.bev_net is None else BEVNet(conf.bev_net)
@@ -120,19 +132,38 @@ class OrienterNet(BaseModel):
 
         # Extract image features.
         level = 0
-        f_image = self.image_encoder(data)["feature_maps"][level]
+        f_image = self.image_encoder(data)["feature_maps"][level]#[1,128,1024,1232]
         camera = data["camera"].scale(1 / self.image_encoder.scales[level])
         camera = camera.to(data["image"].device, non_blocking=True)
 
-        # Estimate the monocular priors.
+        #extract radar_bev_features
+        r_image = self.radar_encoder(data)["feature_maps"][level]#[1,128,128,128]
+
+
+        # Estimate the monocular priors.估计单目先验
         pred["pixel_scales"] = scales = self.scale_classifier(f_image.moveaxis(1, -1))
-        f_polar = self.projection_polar(f_image, scales, camera)
+        f_polar = self.projection_polar(f_image, scales, camera)#【1，128，64，1232】
 
         # Map to the BEV.
         with torch.autocast("cuda", enabled=False):
             f_bev, valid_bev, _ = self.projection_bev(
                 f_polar.float(), None, camera.float()
-            )
+            )#f_bev[1，128，64，129]
+        radar_feature = r_image
+        image_feature_size = (64, 129)
+        # 调整radar_feature的空间大小
+        radar_feature = F.interpolate(radar_feature, size=image_feature_size, mode='bilinear', align_corners=False)
+        image_feature = f_bev
+        # fusion_net融合feature
+        fusion_feature = self.fusion_net({"f_radar": radar_feature,"f_image":image_feature})
+        # print(fusion_feature.shape)#[1, 128, 64, 129]
+
+        f_bev = fusion_feature
+        # #可视化
+        # target= f_bev
+        # target_pil = ToPILImage()(target[0].cpu())
+        # target_pil.save("f_bev_fusion.png")
+
         pred_bev = {}
         if self.conf.bev_net is None:
             # channel last -> classifier -> channel first
@@ -140,7 +171,7 @@ class OrienterNet(BaseModel):
         else:
             pred_bev = pred["bev"] = self.bev_net({"input": f_bev})
             f_bev = pred_bev["output"]
-
+        
         scores = self.exhaustive_voting(
             f_bev, f_map, valid_bev, pred_bev.get("confidence")
         )

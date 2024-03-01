@@ -32,5 +32,3 @@ model:
     latent_dim: ${..latent_dim}
     output_dim: ${..matching_dim}
     confidence: true
-  fusion_net:
-    in_channels: 128

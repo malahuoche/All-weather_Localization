@@ -225,7 +225,7 @@ def train(cfg: DictConfig, job_id: Optional[int] = None):
 
 
 @hydra.main(
-    config_path=osp.join(osp.dirname(__file__), "conf"), config_name="orienternet"
+    config_path=osp.join(osp.dirname(__file__), "conf"), config_name="orienternet_fusion"
     # config_path=osp.join(osp.dirname(__file__), "conf"), config_name="rotation_selector"
     # config_path=osp.join(osp.dirname(__file__), "conf"), config_name="orienternet_radar"
 )

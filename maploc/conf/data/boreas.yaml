@@ -1,4 +1,5 @@
 name: boreas
+sensor_type: radar_camera
 loading:
   train:
     batch_size: 4

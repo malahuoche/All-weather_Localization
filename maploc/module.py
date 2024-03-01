@@ -49,7 +49,7 @@ class GenericModule(pl.LightningModule):
         super().__init__()
         # 这里读的是 orienternet.yaml配置文件
         name = cfg.model.get("name")
-        name = "orienternet" if name in ("localizer_bev_depth", None) else name
+        # name = "orienternet" if name in ("localizer_bev_depth", None) else name
         self.model = get_model(name)(cfg.model)
         self.cfg = cfg
         self.save_hyperparameters(cfg)
